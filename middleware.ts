@@ -53,6 +53,6 @@ export const config = {
         "/horarios/:path*",
         "/finanzas/:path*",
         "/estadisticas/:path*",
-        "/login",
     ],
 };
+
