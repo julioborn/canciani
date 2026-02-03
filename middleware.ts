@@ -3,16 +3,21 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 export async function middleware(req: NextRequest) {
+    // 🔐 Si no hay secret, NO ejecutar middleware (evita crash)
+    const secret = process.env.NEXTAUTH_SECRET;
+    if (!secret) {
+        return NextResponse.next();
+    }
+
     const token = await getToken({
         req,
-        secret: process.env.NEXTAUTH_SECRET,
+        secret,
     });
 
     const { pathname } = req.nextUrl;
 
     // 🔓 Login público
     if (pathname.startsWith("/login")) {
-        // si ya está logueado, mandarlo al dashboard
         if (token) {
             return NextResponse.redirect(new URL("/dashboard", req.url));
         }
@@ -27,8 +32,7 @@ export async function middleware(req: NextRequest) {
     // ======================
     // 🔐 Reglas por rol
     // ======================
-
-    const role = token.role as "admin" | "superadmin";
+    const role = (token.role ?? "admin") as "admin" | "superadmin";
 
     const superAdminOnlyRoutes = [
         "/finanzas",
@@ -36,9 +40,7 @@ export async function middleware(req: NextRequest) {
     ];
 
     if (
-        superAdminOnlyRoutes.some((route) =>
-            pathname.startsWith(route)
-        ) &&
+        superAdminOnlyRoutes.some(route => pathname.startsWith(route)) &&
         role !== "superadmin"
     ) {
         return NextResponse.redirect(new URL("/dashboard", req.url));
