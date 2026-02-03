@@ -1,3 +1,5 @@
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
 import connectMongoDB from "@/lib/mongodb";
 import PedidoDesposte from "@/models/PedidoDesposte";
