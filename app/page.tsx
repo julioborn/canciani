@@ -10,4 +10,7 @@ export default async function Home() {
   }
 
   redirect("/login");
+
+  // ⬇️ fallback obligatorio para Vercel
+  return null;
 }

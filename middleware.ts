@@ -3,17 +3,13 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 export async function middleware(req: NextRequest) {
-    // 🔐 Si no hay secret, NO ejecutar middleware (evita crash)
     const secret = process.env.NEXTAUTH_SECRET;
     if (!secret) {
+        // Edge safety: no romper producción
         return NextResponse.next();
     }
 
-    const token = await getToken({
-        req,
-        secret,
-    });
-
+    const token = await getToken({ req, secret });
     const { pathname } = req.nextUrl;
 
     // 🔓 Login público
