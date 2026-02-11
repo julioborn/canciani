@@ -94,7 +94,43 @@ export default function CerrarPedidoPage() {
 
         if (!result.isConfirmed) return;
 
-        // cerrar pedido…
+        try {
+            setLoading(true);
+
+            const res = await fetch(`/api/pedidos/${id}/cerrar`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    kilos,
+                }),
+            });
+
+            if (!res.ok) {
+                throw new Error("Error al cerrar el pedido");
+            }
+
+            await Swal.fire({
+                icon: "success",
+                title: "Pedido cerrado",
+                text: "El pedido fue cerrado correctamente",
+                confirmButtonColor: "#b91c1c",
+            });
+
+            router.push("/pedidos");
+
+        } catch (err) {
+            console.error(err);
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "No se pudo cerrar el pedido",
+            });
+        } finally {
+            setLoading(false);
+        }
+
     }
 
     if (loading) {
