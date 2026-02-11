@@ -7,10 +7,6 @@ export default async function PedidosPage() {
 
     return (
         <div className="p-6">
-            <h1 className="text-2xl font-bold mb-4">
-                Pedidos
-            </h1>
-
             <PedidosTable />
         </div>
     );

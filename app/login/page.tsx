@@ -32,7 +32,7 @@ export default function LoginPage() {
                 onSubmit={handleSubmit}
                 className="w-80 rounded border p-6 space-y-4"
             >
-                <h1 className="text-xl font-bold text-center">Login Admin</h1>
+                <h1 className="text-xl font-bold text-center">Iniciar Sesión</h1>
 
                 {error && <p className="text-red-500 text-sm">{error}</p>}
 

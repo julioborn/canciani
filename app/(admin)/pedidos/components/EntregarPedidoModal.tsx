@@ -1,92 +1,117 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 
-type Props = {
-    pedido: {
-        _id: string;
-        tipoRetiro: "desposte" | "retiro";
-    };
-    onClose: () => void;
-    onSuccess: () => void;
+type Item = {
+    productoId: string;
+    nombre: string;
+    precioKg: number;
 };
 
-export default function EntregarPedidoModal({
-    pedido,
-    onClose,
-    onSuccess,
-}: Props) {
-    const [kilosReales, setKilosReales] = useState("");
+export default function EntregarPedidoPage() {
+    const { id } = useParams();
+    const router = useRouter();
+
+    const [items, setItems] = useState<Item[]>([]);
+    const [kilos, setKilos] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(false);
 
-    const entregar = async () => {
-        if (!kilosReales) return;
+    useEffect(() => {
+        fetch(`/admin/pedidos/${id}`)
+            .then(r => r.json())
+            .then(d => setItems(d.pedido.items));
+    }, [id]);
+
+    const total = useMemo(() => {
+        return items.reduce(
+            (sum, i) => sum + (kilos[i.productoId] || 0) * i.precioKg,
+            0
+        );
+    }, [items, kilos]);
+
+    const hayError = items.some(
+        i => !kilos[i.productoId] || kilos[i.productoId] <= 0
+    );
+
+    async function cerrarPedido() {
+        if (hayError) return;
 
         setLoading(true);
 
-        const endpoint =
-            pedido.tipoRetiro === "desposte"
-                ? `/api/pedidos/desposte/${pedido._id}/entregar`
-                : `/api/pedidos/retiro/${pedido._id}/entregar`;
+        const res = await fetch(`/admin/pedidos/${id}/cerrar`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                items: items.map(i => ({
+                    productoId: i.productoId,
+                    kilos: kilos[i.productoId],
+                })),
+            }),
+        });
 
-        try {
-            const res = await fetch(endpoint, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ kilosReales: Number(kilosReales) }),
-            });
+        setLoading(false);
 
-            if (!res.ok) {
-                const text = await res.text();
-                console.error("❌ Error entrega:", res.status, text);
-                alert("Error entregando. Mirá la consola (F12).");
-                return;
-            }
-
-            onSuccess();
-            onClose();
-        } finally {
-            setLoading(false);
+        if (res.ok) {
+            router.push("/pedidos");
+        } else {
+            alert("Error cerrando pedido");
         }
-    };
+    }
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-            <div className="bg-white w-full max-w-md rounded-2xl p-6 space-y-4">
-                <h2 className="text-lg font-bold">Finalizar entrega</h2>
+        <div className="p-6 max-w-xl">
+            <h1 className="text-xl font-bold mb-4">Cerrar pedido</h1>
 
-                <div>
-                    <label className="text-sm text-gray-600">
-                        KG finales
-                    </label>
+            {items.map(i => (
+                <div key={i.productoId} className="flex items-center gap-2 mb-3">
+                    <div className="flex-1">
+                        <p className="font-medium">{i.nombre}</p>
+                        <p className="text-xs text-gray-500">
+                            ${i.precioKg} / kg
+                        </p>
+                    </div>
+
                     <input
                         type="number"
-                        min="0"
-                        step="0.1"
-                        value={kilosReales}
-                        onChange={(e) => setKilosReales(e.target.value)}
-                        className="w-full border rounded-lg px-3 py-2"
-                        autoFocus
+                        step="0.01"
+                        min={0}
+                        className="border px-2 py-1 w-24 rounded"
+                        placeholder="Kg"
+                        onChange={e =>
+                            setKilos({
+                                ...kilos,
+                                [i.productoId]: Number(e.target.value),
+                            })
+                        }
                     />
-                </div>
 
-                <div className="flex justify-end gap-2 pt-4">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 text-sm rounded bg-gray-200"
-                    >
-                        Cancelar
-                    </button>
-
-                    <button
-                        onClick={entregar}
-                        disabled={loading || !kilosReales}
-                        className="px-4 py-2 text-sm rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-                    >
-                        {loading ? "Guardando..." : "Confirmar entrega"}
-                    </button>
+                    <div className="w-24 text-right font-medium">
+                        ${(kilos[i.productoId] || 0) * i.precioKg}
+                    </div>
                 </div>
+            ))}
+
+            <hr className="my-4" />
+
+            <div className="flex justify-between items-center mb-4">
+                <span className="font-semibold">Total</span>
+                <span className="text-lg font-bold">${total}</span>
             </div>
+
+            {hayError && (
+                <p className="text-sm text-red-600 mb-3">
+                    ⚠️ Todos los productos deben tener kilos mayores a 0
+                </p>
+            )}
+
+            <button
+                disabled={loading || hayError}
+                onClick={cerrarPedido}
+                className="w-full bg-green-600 text-white py-2 rounded disabled:opacity-50"
+            >
+                {loading ? "Cerrando pedido..." : "Confirmar entrega"}
+            </button>
         </div>
     );
 }
