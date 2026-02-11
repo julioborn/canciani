@@ -97,15 +97,25 @@ export default function CerrarPedidoPage() {
         try {
             setLoading(true);
 
+            const itemsParaEnviar = items.map((i) => ({
+                productoId: i.productoId,
+                kilosReales: Number(kilos[i.productoId] || 0),
+            }));
+
             const res = await fetch(`/api/pedidos/${id}/cerrar`, {
-                method: "PATCH",
+                method: "POST", // 👈 CAMBIAMOS PATCH POR POST
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    kilos,
+                    items: itemsParaEnviar, // 👈 CAMBIAMOS FORMATO
                 }),
             });
+
+            if (!res.ok) {
+                const error = await res.json();
+                throw new Error(error?.error || "Error al cerrar el pedido");
+            }
 
             if (!res.ok) {
                 throw new Error("Error al cerrar el pedido");
